@@ -215,3 +215,82 @@ def analyze_with_gemma(repository, checks):
     }
     data = _call(body, key)
     return validate(_extract_json(_response_text(data)), corpus)
+
+def chat_with_gemma(question, analysis, history):
+    _load_dotenv()
+    key = os.environ.get("GEMMA_API_KEY")
+
+    if not key:
+        raise GemmaError("GEMMA_API_KEY is not configured.")
+
+    evidence = build_evidence(
+        analysis.get("repository", {}),
+        analysis.get("checks", {})
+    )
+
+    findings = analysis.get("ai_analysis", {}).get("findings", [])
+    summary = analysis.get("ai_analysis", {}).get("summary", "")
+
+    prompt = f"""
+You are RepoDoctor, an AI engineer helping a developer understand and fix
+a GitHub repository.
+
+You are NOT a generic chatbot.
+
+You have been given the results of RepoDoctor's deterministic inspection
+and its existing AI findings. Use ONLY the supplied information when making
+claims about the repository.
+
+IMPORTANT RULES:
+- Never invent files, code, dependencies, errors, or behavior.
+- If the supplied evidence does not answer the question, say that clearly.
+- Do not claim that you executed the repository.
+- Do not claim that you tested a fix.
+- Give practical developer-friendly explanations.
+- When suggesting a fix, explain exactly what the developer should change.
+- If a patch would be useful, provide a small concrete patch.
+- Do not expose secrets or credential values.
+- Keep answers concise but useful.
+
+REPOSITORY EVIDENCE:
+{evidence}
+
+EXISTING REPO DOCTOR FINDINGS:
+{findings}
+
+REPO DOCTOR SUMMARY:
+{summary}
+
+CONVERSATION:
+{history}
+
+USER QUESTION:
+{question}
+"""
+
+    body = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 1200
+        }
+    }
+
+    try:
+        data = _call(body, key)
+        answer = _response_text(data).strip()
+
+        if not answer:
+            raise GemmaError("Gemma returned an empty response.")
+
+        return answer
+
+    except GemmaError:
+        raise
+    except Exception as e:
+        raise GemmaError(f"Chat request failed: {e}")

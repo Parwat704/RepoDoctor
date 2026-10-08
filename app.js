@@ -1,5 +1,8 @@
 const $ = (id) => document.getElementById(id);
+
 let currentPatch = "";
+let currentAnalysis = null;
+let chatHistory = [];
 
 async function getAnalysis(url) {
   let res;
@@ -52,7 +55,10 @@ async function analyze() {
 
 function render(data) {
   const { repository: r, ai_analysis: ai } = data;
+  currentAnalysis = data;
+chatHistory = [];
   const f = ai.findings;
+  
   $("repo-name").textContent = r.name;
   $("repo-meta").textContent = `${r.language} · ${r.file_count} files · ${r.important_files.join(", ")}`;
   const high = f.filter((x) => x.severity === "high").length;
@@ -104,4 +110,104 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("modal")
 $("copy-btn").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(currentPatch); $("copy-btn").textContent = "Copied"; }
   catch { $("copy-btn").textContent = "Copy failed. Select the text manually."; }
+});
+async function askRepoDoctor(question) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      question,
+      analysis: currentAnalysis,
+      history: chatHistory,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok || !data || !data.success) {
+    throw new Error(
+      (data && data.error) || "RepoDoctor could not answer right now."
+    );
+  }
+
+  return data.answer;
+}
+
+function addChatMessage(role, message) {
+  const container = $("chat-messages");
+
+  const div = document.createElement("div");
+  div.className = `chat-message ${role}`;
+
+  const label = role === "user" ? "You" : "RepoDoctor";
+
+  div.innerHTML = `
+    <div class="chat-label">${label}</div>
+    <p>${esc(message).replace(/\n/g, "<br>")}</p>
+  `;
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = $("chat-input");
+  const question = input.value.trim();
+
+  if (!question || !currentAnalysis) return;
+
+  $("chat-error").hidden = true;
+  input.value = "";
+
+  addChatMessage("user", question);
+
+  chatHistory.push({
+    role: "user",
+    content: question,
+  });
+
+  const loading = document.createElement("div");
+  loading.className = "chat-message loading";
+  loading.id = "chat-loading";
+  loading.innerHTML = `
+    <div class="chat-label">RepoDoctor</div>
+    <p>Thinking…</p>
+  `;
+
+  $("chat-messages").appendChild(loading);
+  $("chat-messages").scrollTop = $("chat-messages").scrollHeight;
+
+  $("chat-send").disabled = true;
+
+  try {
+    const answer = await askRepoDoctor(question);
+
+    $("chat-loading")?.remove();
+
+    addChatMessage("assistant", answer);
+
+    chatHistory.push({
+      role: "assistant",
+      content: answer,
+    });
+  } catch (e) {
+    $("chat-loading")?.remove();
+
+    $("chat-error").textContent = e.message;
+    $("chat-error").hidden = false;
+  } finally {
+    $("chat-send").disabled = false;
+    input.focus();
+  }
+}
+
+$("chat-send").addEventListener("click", sendChatMessage);
+
+$("chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
 });

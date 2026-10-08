@@ -29,7 +29,16 @@
           <h2 id="repo-name"></h2>
           <p class="meta" id="repo-meta"></p>
         </div>
-        <button id="reset-btn" class="ghost">Analyze another</button>
+    
+        <div class="results-actions">
+          <a id="github-btn" class="ghost github-btn" href="#" target="_blank" rel="noopener noreferrer">
+            View on GitHub ↗
+          </a>
+    
+          <button id="reset-btn" class="ghost">
+            Analyze another
+          </button>
+        </div>
       </header>
 
       <h3 class="section-title">Repository snapshot</h3>
@@ -43,8 +52,39 @@
         <summary>Deterministic evidence (raw JSON)</summary>
         <pre id="raw-evidence"></pre>
       </details>
-    </section>
-  </main>
+
+      <section class="chat-section">
+        <div class="chat-head">
+          <div>
+            <h3 class="section-title">Ask RepoDoctor</h3>
+            <p class="chat-subtitle">
+              Ask questions about this repository, its findings, or how to fix them.
+            </p>
+          </div>
+        </div>
+
+        <div id="chat-messages" class="chat-messages">
+          <div class="chat-message assistant">
+            <div class="chat-label">RepoDoctor</div>
+            <p>
+              I've analyzed this repository. Ask me what went wrong,
+              why it matters, or how to fix it.
+            </p>
+          </div>
+        </div>
+
+        <div class="chat-input-row">
+          <textarea
+            id="chat-input"
+            placeholder="Ask something about this repository..."
+            rows="2"
+          ></textarea>
+
+          <button id="chat-send">Ask</button>
+        </div>
+
+        <p id="chat-error" class="error" hidden></p>
+      </section>
 
   <div id="modal" class="modal" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">

@@ -7,8 +7,7 @@ import tempfile
 from flask import Flask, jsonify, request, send_from_directory
 
 from analyzer import analyze
-from gemma import GemmaError, analyze_with_gemma
-
+from gemma import GemmaError, analyze_with_gemma, chat_with_gemma
 app = Flask(__name__)
 
 GITHUB_URL = re.compile(r"^https://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?/?$")
@@ -120,6 +119,48 @@ def analyze_route():
     finally:
         remove_tree(tmp)
 
+@app.post("/api/chat")
+def chat_route():
+    body = request.get_json(silent=True) or {}
+
+    question = str(body.get("question", "")).strip()
+    analysis = body.get("analysis")
+    history = body.get("history", [])
+
+    if not question:
+        return error("Please enter a question.")
+
+    if not isinstance(analysis, dict):
+        return error("No repository analysis was provided.")
+
+    if not isinstance(history, list):
+        history = []
+
+    history = history[-10:]
+
+    try:
+        answer = chat_with_gemma(
+            question,
+            analysis,
+            history
+        )
+
+        return jsonify({
+            "success": True,
+            "answer": answer
+        })
+
+    except GemmaError as e:
+        app.logger.warning("Gemma chat failed: %s", e.message)
+        return error(e.message, 502)
+
+    except Exception:
+        app.logger.exception("chat failed")
+        return error("Something went wrong while asking RepoDoctor.", 500)
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
+
+
