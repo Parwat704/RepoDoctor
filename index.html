@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RepoDoctor: Diagnose. Explain. Fix.</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <section id="landing">
+      <h1>RepoDoctor</h1>
+      <p class="tagline">Diagnose. Explain. Fix.</p>
+      <p class="lede">Give us a public GitHub repository.<br>We'll inspect it and tell you what needs attention.</p>
+      <div class="input-row">
+        <input id="repo-url" type="text" value="https://github.com/user/repository" spellcheck="false" aria-label="GitHub repository URL">
+        <button id="analyze-btn">Analyze repository</button>
+      </div>
+      <p id="error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section id="loading" hidden>
+      <p class="mono" id="loading-text">Cloning and inspecting repository…</p>
+    </section>
+
+    <section id="results" hidden>
+      <header class="results-head">
+        <div>
+          <h2 id="repo-name"></h2>
+          <p class="meta" id="repo-meta"></p>
+        </div>
+        <button id="reset-btn" class="ghost">Analyze another</button>
+      </header>
+
+      <h3 class="section-title">Repository snapshot</h3>
+      <div class="snapshot" id="snapshot"></div>
+      <p class="summary" id="summary"></p>
+
+      <h3 class="section-title">Findings</h3>
+      <div id="findings"></div>
+
+      <details class="raw">
+        <summary>Deterministic evidence (raw JSON)</summary>
+        <pre id="raw-evidence"></pre>
+      </details>
+    </section>
+  </main>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button id="modal-close" class="ghost close">Close</button>
+      <h3 id="modal-title">Suggested fix</h3>
+      <p id="modal-explain"></p>
+      <pre class="diff" id="modal-diff"></pre>
+      <button id="copy-btn">Copy patch</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
